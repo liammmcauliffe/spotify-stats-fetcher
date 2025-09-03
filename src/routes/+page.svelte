@@ -17,6 +17,7 @@
 	import LoadingStates from '$lib/components/LoadingStates.svelte';
 	import ErrorState from '$lib/components/ErrorState.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import TimeRangeSelector from '$lib/components/TimeRangeSelector.svelte';
 
 	const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 	const redirectUri = 'http://127.0.0.1:5173';
@@ -83,6 +84,9 @@
 		savedAlbums: [] as any[],
 		savedTracks: [] as any[]
 	};
+
+	// Time range state
+	let selectedTimeRange = 'medium_term';
 
 	function formatNumber(num: number): string {
 		if (num >= 1000000) {
@@ -153,8 +157,10 @@
 		try {
 			loadingStates.topArtists = true;
 			errorStates.topArtists = false;
-			const data = await callSpotifyApi('/me/top/artists?time_range=long_term&limit=20');
+			console.log('Fetching top artists with time range:', selectedTimeRange);
+			const data = await callSpotifyApi(`/me/top/artists?time_range=${selectedTimeRange}&limit=20`);
 			topArtists = data.items;
+			console.log('Top artists fetched:', topArtists.length, 'items');
 			// Debug: Log first few artists to see genre data
 			console.log(
 				'Top artists with genres:',
@@ -176,8 +182,10 @@
 		try {
 			loadingStates.topTracks = true;
 			errorStates.topTracks = false;
-			const data = await callSpotifyApi('/me/top/tracks?time_range=long_term&limit=20');
+			console.log('Fetching top tracks with time range:', selectedTimeRange);
+			const data = await callSpotifyApi(`/me/top/tracks?time_range=${selectedTimeRange}&limit=20`);
 			topTracks = data.items;
+			console.log('Top tracks fetched:', topTracks.length, 'items');
 		} catch (error) {
 			console.error('Failed to fetch top tracks:', error);
 			errorStates.topTracks = true;
@@ -355,6 +363,17 @@
 	// Search functions
 	function handleSearch(event: CustomEvent) {
 		searchQuery = event.detail.query;
+		applySearch();
+	}
+
+	// Time range functions
+	async function handleTimeRangeChange(event: CustomEvent) {
+		selectedTimeRange = event.detail.timeRange;
+		console.log('Time range changed to:', selectedTimeRange);
+		// Refetch top artists and tracks with new time range
+		await fetchTopArtists();
+		await fetchTopTracks();
+		// Update filtered data after fetching new data
 		applySearch();
 	}
 
@@ -699,6 +718,11 @@
 
 			<!-- Navigation -->
 			<Navigation {activeSection} onSectionChange={handleSectionChange} />
+
+			<!-- Time Range Selector (only for relevant sections) -->
+			{#if activeSection === 'overview' || activeSection === 'top-tracks' || activeSection === 'top-artists'}
+				<TimeRangeSelector {selectedTimeRange} on:change={handleTimeRangeChange} />
+			{/if}
 
 			<!-- No Results Message -->
 			{#if searchQuery && getCurrentSectionResults().length === 0}
