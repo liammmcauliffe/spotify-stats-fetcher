@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { Music, Play, Pause, Volume2 } from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let currentlyPlaying: any;
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function formatDuration(ms: number) {
 		const minutes = Math.floor(ms / 60000);
@@ -10,7 +15,11 @@
 	}
 </script>
 
-{#if currentlyPlaying && currentlyPlaying.item}
+{#if isLoading}
+	<LoadingStates type="track" count={1} />
+{:else if hasError}
+	<ErrorState showError={true} errorMessage="Failed to load currently playing track" {onRetry} />
+{:else if currentlyPlaying && currentlyPlaying.item}
 	<div
 		class="shadow-glow relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur"
 	>

@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { User, Crown, Users, MapPin, ExternalLink } from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let userProfile: any;
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function formatNumber(num: number): string {
 		if (num >= 1000000) {
@@ -13,7 +18,11 @@
 	}
 </script>
 
-{#if userProfile}
+{#if isLoading}
+	<LoadingStates type="profile" count={1} />
+{:else if hasError}
+	<ErrorState showError={true} errorMessage="Failed to load user profile" {onRetry} />
+{:else if userProfile}
 	<div
 		class="shadow-glow relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur"
 	>

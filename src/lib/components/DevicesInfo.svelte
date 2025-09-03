@@ -15,8 +15,13 @@
 		WifiOff,
 		AlertTriangle
 	} from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let devices: any[] = [];
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function getDeviceIcon(deviceType: string) {
 		switch (deviceType.toLowerCase()) {
@@ -48,7 +53,23 @@
 	}
 </script>
 
-{#if devices.length > 0}
+{#if isLoading}
+	<div class="mx-auto w-full max-w-4xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Available Devices</h2>
+			<p class="text-white/60">Manage your Spotify playback across devices</p>
+		</div>
+		<LoadingStates type="track" count={5} />
+	</div>
+{:else if hasError}
+	<div class="mx-auto w-full max-w-4xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Available Devices</h2>
+			<p class="text-white/60">Manage your Spotify playback across devices</p>
+		</div>
+		<ErrorState showError={true} errorMessage="Failed to load devices" {onRetry} />
+	</div>
+{:else if devices.length > 0}
 	<div class="mx-auto w-full max-w-4xl">
 		<div class="mb-8 text-center">
 			<h2 class="mb-2 text-3xl font-bold text-white">Available Devices</h2>

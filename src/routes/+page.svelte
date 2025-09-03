@@ -14,6 +14,8 @@
 	import SavedTracks from '$lib/components/SavedTracks.svelte';
 	import DevicesInfo from '$lib/components/DevicesInfo.svelte';
 	import TrackCard from '$lib/components/TrackCard.svelte';
+	import LoadingStates from '$lib/components/LoadingStates.svelte';
+	import ErrorState from '$lib/components/ErrorState.svelte';
 
 	const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 	const redirectUri = 'http://127.0.0.1:5173';
@@ -32,6 +34,35 @@
 	let savedAlbums: any = [];
 	let savedTracks: any = [];
 	let devices: any = [];
+
+	// Loading and error states
+	let isLoading = false;
+	let hasError = false;
+	let errorMessage = '';
+	let loadingStates: Record<string, boolean> = {
+		userProfile: false,
+		topArtists: false,
+		topTracks: false,
+		currentlyPlaying: false,
+		recentlyPlayed: false,
+		playlists: false,
+		followedArtists: false,
+		savedAlbums: false,
+		savedTracks: false,
+		devices: false
+	};
+	let errorStates: Record<string, boolean> = {
+		userProfile: false,
+		topArtists: false,
+		topTracks: false,
+		currentlyPlaying: false,
+		recentlyPlayed: false,
+		playlists: false,
+		followedArtists: false,
+		savedAlbums: false,
+		savedTracks: false,
+		devices: false
+	};
 
 	// Pagination for saved tracks
 	let savedTracksOffset = 0;
@@ -65,11 +96,20 @@
 	});
 
 	async function fetchAllData() {
+		isLoading = true;
+		hasError = false;
+
+		// Reset all loading and error states
+		Object.keys(loadingStates).forEach((key: string) => {
+			loadingStates[key] = true;
+			errorStates[key] = false;
+		});
+
 		await Promise.all([
 			fetchUserProfile(),
 			fetchTopArtists(),
 			fetchTopTracks(),
-			fetchNowPlaying(),
+			fetchNowPlaying(true), // Initial load
 			fetchRecentlyPlayed(),
 			fetchPlaylists(),
 			fetchFollowedArtists(),
@@ -77,18 +117,27 @@
 			fetchSavedTracks(),
 			fetchDevices()
 		]);
+
+		isLoading = false;
 	}
 
 	async function fetchUserProfile() {
 		try {
+			loadingStates.userProfile = true;
+			errorStates.userProfile = false;
 			userProfile = await callSpotifyApi('/me');
 		} catch (error) {
 			console.error('Failed to fetch user profile:', error);
+			errorStates.userProfile = true;
+		} finally {
+			loadingStates.userProfile = false;
 		}
 	}
 
 	async function fetchTopArtists() {
 		try {
+			loadingStates.topArtists = true;
+			errorStates.topArtists = false;
 			const data = await callSpotifyApi('/me/top/artists?time_range=long_term&limit=20');
 			topArtists = data.items;
 			// Debug: Log first few artists to see genre data
@@ -102,76 +151,119 @@
 			);
 		} catch (error) {
 			console.error('Failed to fetch top artists:', error);
+			errorStates.topArtists = true;
+		} finally {
+			loadingStates.topArtists = false;
 		}
 	}
 
 	async function fetchTopTracks() {
 		try {
+			loadingStates.topTracks = true;
+			errorStates.topTracks = false;
 			const data = await callSpotifyApi('/me/top/tracks?time_range=long_term&limit=20');
 			topTracks = data.items;
 		} catch (error) {
 			console.error('Failed to fetch top tracks:', error);
+			errorStates.topTracks = true;
+		} finally {
+			loadingStates.topTracks = false;
 		}
 	}
 
-	async function fetchNowPlaying() {
+	async function fetchNowPlaying(isInitialLoad = false) {
 		try {
+			// Only show loading state on initial load, not during polling
+			if (isInitialLoad) {
+				loadingStates.currentlyPlaying = true;
+			}
+			errorStates.currentlyPlaying = false;
 			const data = await callSpotifyApi('/me/player/currently-playing');
 			currentlyPlaying = data;
 		} catch (error) {
 			console.error('Failed to fetch now playing:', error);
+			errorStates.currentlyPlaying = true;
 			// If it's an auth error, stop polling to prevent spam
 			if (error instanceof Error && error.message.includes('Authentication failed')) {
 				stopNowPlayingPolling();
 				isLoggedIn = false;
+			}
+		} finally {
+			if (isInitialLoad) {
+				loadingStates.currentlyPlaying = false;
 			}
 		}
 	}
 
 	async function fetchRecentlyPlayed() {
 		try {
+			loadingStates.recentlyPlayed = true;
+			errorStates.recentlyPlayed = false;
 			const data = await callSpotifyApi('/me/player/recently-played?limit=50');
 			recentlyPlayed = data.items;
 		} catch (error) {
 			console.error('Failed to fetch recently played:', error);
+			errorStates.recentlyPlayed = true;
+		} finally {
+			loadingStates.recentlyPlayed = false;
 		}
 	}
 
 	async function fetchPlaylists() {
 		try {
+			loadingStates.playlists = true;
+			errorStates.playlists = false;
 			const data = await callSpotifyApi('/me/playlists?limit=50');
 			playlists = data.items;
 		} catch (error) {
 			console.error('Failed to fetch playlists:', error);
+			errorStates.playlists = true;
+		} finally {
+			loadingStates.playlists = false;
 		}
 	}
 
 	async function fetchFollowedArtists() {
 		try {
+			loadingStates.followedArtists = true;
+			errorStates.followedArtists = false;
 			const data = await callSpotifyApi('/me/following?type=artist&limit=50');
 			followedArtists = data.artists.items;
 		} catch (error) {
 			console.error('Failed to fetch followed artists:', error);
+			errorStates.followedArtists = true;
+		} finally {
+			loadingStates.followedArtists = false;
 		}
 	}
 
 	async function fetchSavedAlbums() {
 		try {
+			loadingStates.savedAlbums = true;
+			errorStates.savedAlbums = false;
 			const data = await callSpotifyApi('/me/albums?limit=50');
 			savedAlbums = data.items;
 		} catch (error) {
 			console.error('Failed to fetch saved albums:', error);
+			errorStates.savedAlbums = true;
+		} finally {
+			loadingStates.savedAlbums = false;
 		}
 	}
 
 	async function fetchSavedTracks() {
 		try {
+			loadingStates.savedTracks = true;
+			errorStates.savedTracks = false;
 			const data = await callSpotifyApi('/me/tracks?limit=50&offset=0');
 			savedTracks = data.items;
 			savedTracksOffset = 50;
 			hasMoreSavedTracks = data.total > 50;
 		} catch (error) {
 			console.error('Failed to fetch saved tracks:', error);
+			errorStates.savedTracks = true;
+		} finally {
+			loadingStates.savedTracks = false;
 		}
 	}
 
@@ -188,15 +280,61 @@
 
 	async function fetchDevices() {
 		try {
+			loadingStates.devices = true;
+			errorStates.devices = false;
 			const data = await callSpotifyApi('/me/player/devices');
 			devices = data.devices;
 		} catch (error) {
 			console.error('Failed to fetch devices:', error);
+			errorStates.devices = true;
+		} finally {
+			loadingStates.devices = false;
 		}
 	}
 
 	function handleSectionChange(section: string) {
 		activeSection = section;
+	}
+
+	// Retry functions for error states
+	function retryUserProfile() {
+		fetchUserProfile();
+	}
+
+	function retryTopArtists() {
+		fetchTopArtists();
+	}
+
+	function retryTopTracks() {
+		fetchTopTracks();
+	}
+
+	function retryNowPlaying() {
+		fetchNowPlaying(true); // Show loading state for retry
+	}
+
+	function retryRecentlyPlayed() {
+		fetchRecentlyPlayed();
+	}
+
+	function retryPlaylists() {
+		fetchPlaylists();
+	}
+
+	function retryFollowedArtists() {
+		fetchFollowedArtists();
+	}
+
+	function retrySavedAlbums() {
+		fetchSavedAlbums();
+	}
+
+	function retrySavedTracks() {
+		fetchSavedTracks();
+	}
+
+	function retryDevices() {
+		fetchDevices();
 	}
 
 	function logout() {
@@ -401,10 +539,30 @@
 	{:else}
 		<div class="mx-auto max-w-6xl space-y-8 px-4 py-8">
 			<!-- User Profile Header -->
-			<UserProfile {userProfile} />
+			{#if loadingStates.userProfile}
+				<LoadingStates type="profile" count={1} />
+			{:else if errorStates.userProfile}
+				<ErrorState
+					showError={true}
+					errorMessage="Failed to load user profile"
+					onRetry={retryUserProfile}
+				/>
+			{:else}
+				<UserProfile {userProfile} />
+			{/if}
 
 			<!-- Now Playing Widget -->
-			<NowPlaying {currentlyPlaying} />
+			{#if loadingStates.currentlyPlaying}
+				<LoadingStates type="track" count={1} />
+			{:else if errorStates.currentlyPlaying}
+				<ErrorState
+					showError={true}
+					errorMessage="Failed to load currently playing track"
+					onRetry={retryNowPlaying}
+				/>
+			{:else}
+				<NowPlaying {currentlyPlaying} />
+			{/if}
 
 			<!-- Navigation -->
 			<Navigation {activeSection} onSectionChange={handleSectionChange} />
@@ -413,7 +571,25 @@
 			{#if activeSection === 'overview'}
 				<div class="space-y-12">
 					<!-- Top Artists Overview -->
-					{#if topArtists.length > 0}
+					{#if loadingStates.topArtists}
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+							</div>
+							<LoadingStates type="artist" count={10} />
+						</section>
+					{:else if errorStates.topArtists}
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+							</div>
+							<ErrorState
+								showError={true}
+								errorMessage="Failed to load top artists"
+								onRetry={retryTopArtists}
+							/>
+						</section>
+					{:else if topArtists.length > 0}
 						<section>
 							<div class="mb-6 flex items-end justify-between gap-4">
 								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
@@ -498,7 +674,25 @@
 					{/if}
 
 					<!-- Top Tracks Overview -->
-					{#if topTracks.length > 0}
+					{#if loadingStates.topTracks}
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+							</div>
+							<LoadingStates type="track" count={5} />
+						</section>
+					{:else if errorStates.topTracks}
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+							</div>
+							<ErrorState
+								showError={true}
+								errorMessage="Failed to load top tracks"
+								onRetry={retryTopTracks}
+							/>
+						</section>
+					{:else if topTracks.length > 0}
 						<section>
 							<div class="mb-6 flex items-end justify-between gap-4">
 								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
@@ -525,90 +719,177 @@
 					{/if}
 				</div>
 			{:else if activeSection === 'top-tracks'}
-				<TopTracks {topTracks} />
+				{#if loadingStates.topTracks}
+					<LoadingStates type="track" count={20} />
+				{:else if errorStates.topTracks}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load top tracks"
+						onRetry={retryTopTracks}
+					/>
+				{:else}
+					<TopTracks {topTracks} />
+				{/if}
 			{:else if activeSection === 'top-artists'}
-				<div class="space-y-6">
-					<h2 class="text-2xl font-bold sm:text-3xl">Your Top Artists</h2>
-					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-						{#each topArtists as artist}
-							<article
-								class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
-								style="transform-style: preserve-3d;"
-								on:mouseenter={(e) => {
-									const card = e.currentTarget;
-									card.style.transition = 'transform 0.1s ease-out';
-								}}
-								on:mouseleave={(e) => {
-									const card = e.currentTarget;
-									card.style.transition = 'transform 0.3s ease-out';
-									card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
-								}}
-								on:mousemove={(e) => {
-									const card = e.currentTarget;
-									const rect = card.getBoundingClientRect();
-									const centerX = rect.left + rect.width / 2;
-									const centerY = rect.top + rect.height / 2;
+				{#if loadingStates.topArtists}
+					<LoadingStates type="artist" count={20} />
+				{:else if errorStates.topArtists}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load top artists"
+						onRetry={retryTopArtists}
+					/>
+				{:else}
+					<div class="space-y-6">
+						<h2 class="text-2xl font-bold sm:text-3xl">Your Top Artists</h2>
+						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+							{#each topArtists as artist}
+								<article
+									class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+									style="transform-style: preserve-3d;"
+									on:mouseenter={(e) => {
+										const card = e.currentTarget;
+										card.style.transition = 'transform 0.1s ease-out';
+									}}
+									on:mouseleave={(e) => {
+										const card = e.currentTarget;
+										card.style.transition = 'transform 0.3s ease-out';
+										card.style.transform =
+											'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+									}}
+									on:mousemove={(e) => {
+										const card = e.currentTarget;
+										const rect = card.getBoundingClientRect();
+										const centerX = rect.left + rect.width / 2;
+										const centerY = rect.top + rect.height / 2;
 
-									const mouseX = e.clientX - centerX;
-									const mouseY = e.clientY - centerY;
+										const mouseX = e.clientX - centerX;
+										const mouseY = e.clientY - centerY;
 
-									const rotateX = (mouseY / rect.height) * -20;
-									const rotateY = (mouseX / rect.width) * 20;
+										const rotateX = (mouseY / rect.height) * -20;
+										const rotateY = (mouseX / rect.width) * 20;
 
-									card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
-								}}
-							>
-								<div class="aspect-square p-4">
-									{#if artist.images && artist.images.length > 0}
-										<img
-											src={artist.images[0].url}
-											alt={artist.name}
-											class="h-full w-full rounded-xl object-cover"
-										/>
-									{:else}
-										<div
-											class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
-										>
-											<i data-lucide="user" class="h-8 w-8 text-white/40"></i>
-										</div>
-									{/if}
-								</div>
-								<div class="p-3">
-									<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
-									{#if artist.genres && artist.genres.length > 0}
-										<p class="mt-1 truncate text-xs text-white/60 capitalize">{artist.genres[0]}</p>
-									{:else}
-										<p class="mt-1 truncate text-xs text-white/60">Artist</p>
-									{/if}
-									<div class="mt-1 flex items-center justify-between text-xs text-white/50">
-										<div class="flex items-center gap-1">
-											<Users class="h-3 w-3" />
-											<span>{formatNumber(artist.followers?.total || 0)}</span>
-										</div>
-										{#if artist.popularity}
-											<div class="flex items-center gap-1">
-												<TrendingUp class="h-3 w-3" />
-												<span>{artist.popularity}%</span>
+										card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+									}}
+								>
+									<div class="aspect-square p-4">
+										{#if artist.images && artist.images.length > 0}
+											<img
+												src={artist.images[0].url}
+												alt={artist.name}
+												class="h-full w-full rounded-xl object-cover"
+											/>
+										{:else}
+											<div
+												class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
+											>
+												<i data-lucide="user" class="h-8 w-8 text-white/40"></i>
 											</div>
 										{/if}
 									</div>
-								</div>
-							</article>
-						{/each}
+									<div class="p-3">
+										<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
+										{#if artist.genres && artist.genres.length > 0}
+											<p class="mt-1 truncate text-xs text-white/60 capitalize">
+												{artist.genres[0]}
+											</p>
+										{:else}
+											<p class="mt-1 truncate text-xs text-white/60">Artist</p>
+										{/if}
+										<div class="mt-1 flex items-center justify-between text-xs text-white/50">
+											<div class="flex items-center gap-1">
+												<Users class="h-3 w-3" />
+												<span>{formatNumber(artist.followers?.total || 0)}</span>
+											</div>
+											{#if artist.popularity}
+												<div class="flex items-center gap-1">
+													<TrendingUp class="h-3 w-3" />
+													<span>{artist.popularity}%</span>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</article>
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if activeSection === 'recently-played'}
-				<RecentlyPlayed {recentlyPlayed} />
+				{#if loadingStates.recentlyPlayed}
+					<LoadingStates type="track" count={10} />
+				{:else if errorStates.recentlyPlayed}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load recently played tracks"
+						onRetry={retryRecentlyPlayed}
+					/>
+				{:else}
+					<RecentlyPlayed {recentlyPlayed} />
+				{/if}
 			{:else if activeSection === 'playlists'}
-				<SavedPlaylists {playlists} />
+				{#if loadingStates.playlists}
+					<LoadingStates type="playlist" count={10} />
+				{:else if errorStates.playlists}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load playlists"
+						onRetry={retryPlaylists}
+					/>
+				{:else}
+					<SavedPlaylists {playlists} />
+				{/if}
 			{:else if activeSection === 'followed-artists'}
-				<FollowedArtists {followedArtists} />
+				{#if loadingStates.followedArtists}
+					<LoadingStates type="artist" count={10} />
+				{:else if errorStates.followedArtists}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load followed artists"
+						onRetry={retryFollowedArtists}
+					/>
+				{:else}
+					<FollowedArtists {followedArtists} />
+				{/if}
 			{:else if activeSection === 'saved-albums'}
-				<SavedAlbums {savedAlbums} />
+				{#if loadingStates.savedAlbums}
+					<LoadingStates type="album" count={10} />
+				{:else if errorStates.savedAlbums}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load saved albums"
+						onRetry={retrySavedAlbums}
+					/>
+				{:else}
+					<SavedAlbums {savedAlbums} />
+				{/if}
 			{:else if activeSection === 'saved-tracks'}
-				<SavedTracks {savedTracks} hasMore={hasMoreSavedTracks} onLoadMore={loadMoreSavedTracks} />
+				{#if loadingStates.savedTracks}
+					<LoadingStates type="track" count={10} />
+				{:else if errorStates.savedTracks}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load saved tracks"
+						onRetry={retrySavedTracks}
+					/>
+				{:else}
+					<SavedTracks
+						{savedTracks}
+						hasMore={hasMoreSavedTracks}
+						onLoadMore={loadMoreSavedTracks}
+					/>
+				{/if}
 			{:else if activeSection === 'devices'}
-				<DevicesInfo {devices} />
+				{#if loadingStates.devices}
+					<LoadingStates type="track" count={5} />
+				{:else if errorStates.devices}
+					<ErrorState
+						showError={true}
+						errorMessage="Failed to load devices"
+						onRetry={retryDevices}
+					/>
+				{:else}
+					<DevicesInfo {devices} />
+				{/if}
 			{/if}
 		</div>
 	{/if}

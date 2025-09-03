@@ -1,10 +1,25 @@
 <script lang="ts">
 	import TrackCard from './TrackCard.svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let recentlyPlayed: any[] = [];
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 </script>
 
-{#if recentlyPlayed.length > 0}
+{#if isLoading}
+	<div class="mx-auto w-full max-w-6xl">
+		<h2 class="mb-6 text-center text-3xl font-bold">Recently Played</h2>
+		<LoadingStates type="track" count={10} />
+	</div>
+{:else if hasError}
+	<div class="mx-auto w-full max-w-6xl">
+		<h2 class="mb-6 text-center text-3xl font-bold">Recently Played</h2>
+		<ErrorState showError={true} errorMessage="Failed to load recently played tracks" {onRetry} />
+	</div>
+{:else if recentlyPlayed.length > 0}
 	<div class="mx-auto w-full max-w-6xl">
 		<h2 class="mb-6 text-center text-3xl font-bold">Recently Played</h2>
 		<div class="grid gap-4">

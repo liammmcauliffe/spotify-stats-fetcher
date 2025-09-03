@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { Music, Eye, Lock, ExternalLink, Users } from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let playlists: any[] = [];
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function formatNumber(num: number): string {
 		if (num >= 1000000) {
@@ -13,7 +18,23 @@
 	}
 </script>
 
-{#if playlists.length > 0}
+{#if isLoading}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Your Playlists</h2>
+			<p class="text-white/60">Discover and manage your music collections</p>
+		</div>
+		<LoadingStates type="playlist" count={10} />
+	</div>
+{:else if hasError}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Your Playlists</h2>
+			<p class="text-white/60">Discover and manage your music collections</p>
+		</div>
+		<ErrorState showError={true} errorMessage="Failed to load playlists" {onRetry} />
+	</div>
+{:else if playlists.length > 0}
 	<div class="mx-auto w-full max-w-6xl">
 		<div class="mb-8 text-center">
 			<h2 class="mb-2 text-3xl font-bold text-white">Your Playlists</h2>

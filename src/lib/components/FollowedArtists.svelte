@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { User, Users, TrendingUp } from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let followedArtists: any[] = [];
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function formatNumber(num: number): string {
 		if (num >= 1000000) {
@@ -13,7 +18,21 @@
 	}
 </script>
 
-{#if followedArtists.length > 0}
+{#if isLoading}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-6 flex items-end justify-between gap-4">
+			<h2 class="text-2xl font-bold sm:text-3xl">Artists You Follow</h2>
+		</div>
+		<LoadingStates type="artist" count={10} />
+	</div>
+{:else if hasError}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-6 flex items-end justify-between gap-4">
+			<h2 class="text-2xl font-bold sm:text-3xl">Artists You Follow</h2>
+		</div>
+		<ErrorState showError={true} errorMessage="Failed to load followed artists" {onRetry} />
+	</div>
+{:else if followedArtists.length > 0}
 	<div class="mx-auto w-full max-w-6xl">
 		<div class="mb-6 flex items-end justify-between gap-4">
 			<h2 class="text-2xl font-bold sm:text-3xl">Artists You Follow</h2>

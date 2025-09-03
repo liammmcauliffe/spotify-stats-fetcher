@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { Disc, Music, Calendar, Plus, ExternalLink, Users } from '@lucide/svelte';
+	import LoadingStates from './LoadingStates.svelte';
+	import ErrorState from './ErrorState.svelte';
 
 	export let savedAlbums: any[] = [];
+	export let isLoading: boolean = false;
+	export let hasError: boolean = false;
+	export let onRetry: (() => void) | null = null;
 
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);
@@ -13,7 +18,23 @@
 	}
 </script>
 
-{#if savedAlbums.length > 0}
+{#if isLoading}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Your Saved Albums</h2>
+			<p class="text-white/60">Your personal music collection</p>
+		</div>
+		<LoadingStates type="album" count={10} />
+	</div>
+{:else if hasError}
+	<div class="mx-auto w-full max-w-6xl">
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Your Saved Albums</h2>
+			<p class="text-white/60">Your personal music collection</p>
+		</div>
+		<ErrorState showError={true} errorMessage="Failed to load saved albums" {onRetry} />
+	</div>
+{:else if savedAlbums.length > 0}
 	<div class="mx-auto w-full max-w-6xl">
 		<div class="mb-8 text-center">
 			<h2 class="mb-2 text-3xl font-bold text-white">Your Saved Albums</h2>
