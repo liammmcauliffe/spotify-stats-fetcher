@@ -623,10 +623,8 @@
 <header class="bg-canvas/80 sticky top-0 z-30 border-b border-white/5 backdrop-blur">
 	<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
 		<div class="flex items-center gap-2">
-			<div
-				class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 sm:h-8 sm:w-8"
-			>
-				<Music class="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" />
+			<div class="flex h-7 w-7 items-center justify-center rounded-lg sm:h-8 sm:w-8">
+				<img src="/favicon.png" alt="Spotify Stats" class="h-6 w-6 rounded-sm sm:h-7 sm:w-7" />
 			</div>
 			<span class="text-sm font-semibold text-white sm:text-base">Spotify Stats</span>
 		</div>
@@ -1091,3 +1089,22 @@
 		</div>
 	{/if}
 </main>
+
+<!-- Footer -->
+<footer class="bg-canvas/80 border-t border-white/5 backdrop-blur">
+	<div class="mx-auto max-w-6xl px-3 py-6 sm:px-4">
+		<div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
+			<div class="flex items-center gap-2">
+				<div class="teal-500 flex h-6 w-6 items-center justify-center rounded-lg">
+					<img src="/favicon.png" alt="Spotify Stats" class="h-6 w-6 rounded-sm" />
+				</div>
+				<span class="text-sm text-white/60">Spotify Stats Fetcher</span>
+			</div>
+			<div class="flex items-center gap-4 text-xs text-white/50">
+				<span>Made with ❤️ by Liam</span>
+				<span class="hidden sm:inline">•</span>
+				<span class="hidden sm:inline">Powered by Spotify Web API</span>
+			</div>
+		</div>
+	</div>
+</footer>
