@@ -1,109 +1,153 @@
 <script lang="ts">
+	import {
+		Monitor,
+		Smartphone,
+		Speaker,
+		Tv,
+		Gamepad2,
+		Music,
+		Volume2,
+		Volume1,
+		VolumeX,
+		Check,
+		Lock,
+		Wifi,
+		WifiOff,
+		AlertTriangle
+	} from '@lucide/svelte';
+
 	export let devices: any[] = [];
 
-	function getDeviceIcon(deviceType: string): string {
+	function getDeviceIcon(deviceType: string) {
 		switch (deviceType.toLowerCase()) {
 			case 'computer':
-				return '💻';
+				return Monitor;
 			case 'smartphone':
-				return '📱';
+				return Smartphone;
 			case 'speaker':
-				return '🔊';
+				return Speaker;
 			case 'tv':
-				return '📺';
+				return Tv;
 			case 'game_console':
-				return '🎮';
+				return Gamepad2;
 			default:
-				return '🎵';
+				return Music;
 		}
 	}
 
-	function getVolumeIcon(volume: number): string {
-		if (volume === 0) return '🔇';
-		if (volume < 30) return '🔈';
-		if (volume < 70) return '🔉';
-		return '🔊';
+	function getVolumeIcon(volume: number) {
+		if (volume === 0) return VolumeX;
+		if (volume < 30) return Volume1;
+		return Volume2;
+	}
+
+	function getDeviceStatus(device: any) {
+		if (device.is_active) return { text: 'Active', color: 'emerald', icon: Check };
+		if (device.is_restricted) return { text: 'Restricted', color: 'yellow', icon: AlertTriangle };
+		return { text: 'Available', color: 'gray', icon: Wifi };
 	}
 </script>
 
 {#if devices.length > 0}
 	<div class="mx-auto w-full max-w-4xl">
-		<h2 class="mb-6 text-center text-3xl font-bold">Available Devices</h2>
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Available Devices</h2>
+			<p class="text-white/60">Manage your Spotify playback across devices</p>
+		</div>
+
 		<div class="grid gap-4">
 			{#each devices as device}
-				<div class="rounded-lg bg-gray-800 p-4 transition duration-300 hover:bg-gray-700">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center space-x-4">
-							<div class="text-3xl">
-								{getDeviceIcon(device.type)}
-							</div>
+				{@const status = getDeviceStatus(device)}
+				<article
+					class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+				>
+					<!-- Gradient overlay for visual depth -->
+					<div
+						class="absolute -inset-6 rounded-3xl bg-gradient-to-tr from-emerald-300/5 via-emerald-400/5 to-teal-300/5 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+					></div>
 
-							<div>
-								<h3 class="text-lg font-semibold text-white">
-									{device.name}
-									{#if device.is_active}
-										<span
-											class="ml-2 inline-flex items-center rounded-full bg-green-600 px-2 py-1 text-xs font-medium text-white"
+					<div class="relative p-6">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center space-x-4">
+								<div
+									class="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 transition-transform duration-300 group-hover:scale-105"
+								>
+									<svelte:component
+										this={getDeviceIcon(device.type)}
+										class="h-7 w-7 text-emerald-300"
+									/>
+								</div>
+
+								<div class="flex-1">
+									<div class="mb-2 flex items-center gap-3">
+										<h3
+											class="text-lg font-semibold text-white transition-colors group-hover:text-emerald-300"
 										>
-											<svg class="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-												<path
-													fill-rule="evenodd"
-													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-											Active
+											{device.name}
+										</h3>
+										<span
+											class="inline-flex items-center rounded-full border border-{status.color}-300/20 bg-{status.color}-400/10 px-2 py-1 text-xs font-medium text-{status.color}-300"
+										>
+											<svelte:component this={status.icon} class="mr-1 h-3 w-3" />
+											{status.text}
 										</span>
-									{/if}
-								</h3>
+									</div>
 
-								<div class="flex items-center space-x-4 text-sm text-gray-400">
-									<span class="capitalize">{device.type.replace('_', ' ')}</span>
-
-									{#if device.volume_percent !== undefined}
-										<div class="flex items-center space-x-2">
-											<span>{getVolumeIcon(device.volume_percent)}</span>
-											<span>{device.volume_percent}%</span>
+									<div class="flex flex-wrap items-center gap-4 text-sm text-white/60">
+										<div class="flex items-center gap-1">
+											<svelte:component this={getDeviceIcon(device.type)} class="h-4 w-4" />
+											<span class="capitalize">{device.type.replace('_', ' ')}</span>
 										</div>
-									{/if}
 
-									{#if device.is_private_session}
-										<span class="flex items-center">
-											<svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-												<path
-													fill-rule="evenodd"
-													d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-													clip-rule="evenodd"
+										{#if device.volume_percent !== undefined}
+											<div class="flex items-center gap-1">
+												<svelte:component
+													this={getVolumeIcon(device.volume_percent)}
+													class="h-4 w-4"
 												/>
-											</svg>
-											Private Session
-										</span>
-									{/if}
+												<span>{device.volume_percent}% volume</span>
+											</div>
+										{/if}
+
+										{#if device.is_private_session}
+											<div class="flex items-center gap-1">
+												<Lock class="h-4 w-4" />
+												<span>Private Session</span>
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
-						</div>
 
-						<div class="flex items-center space-x-2">
-							{#if device.is_restricted}
-								<span class="text-sm text-yellow-400">Restricted</span>
-							{/if}
-
-							{#if device.supports_volume}
-								<span class="text-sm text-green-400">Volume Control</span>
-							{/if}
+							<div class="flex items-center space-x-2">
+								{#if device.is_restricted}
+									<div class="flex items-center gap-1 text-yellow-400">
+										<AlertTriangle class="h-4 w-4" />
+										<span class="text-sm">Restricted</span>
+									</div>
+								{/if}
+							</div>
 						</div>
 					</div>
-				</div>
+				</article>
 			{/each}
 		</div>
 	</div>
 {:else}
 	<div class="mx-auto w-full max-w-4xl text-center">
-		<h2 class="mb-6 text-3xl font-bold">Available Devices</h2>
-		<div class="rounded-lg bg-gray-800 p-8">
-			<p class="text-gray-400">
-				No devices found. Make sure Spotify is open on at least one device.
-			</p>
+		<div class="mb-8 text-center">
+			<h2 class="mb-2 text-3xl font-bold text-white">Available Devices</h2>
+			<p class="text-white/60">Manage your Spotify playback across devices</p>
+		</div>
+
+		<div class="rounded-2xl border border-white/10 bg-white/5 p-12 backdrop-blur">
+			<div
+				class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-gray-700/50 to-gray-800/50"
+			>
+				<WifiOff class="h-8 w-8 text-white/40" />
+			</div>
+			<p class="mb-2 text-white/60">No devices found</p>
+			<p class="text-sm text-white/40">Make sure Spotify is open on at least one device</p>
 		</div>
 	</div>
 {/if}

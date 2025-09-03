@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { User, Users, TrendingUp } from '@lucide/svelte';
+
 	export let followedArtists: any[] = [];
 
 	function formatNumber(num: number): string {
@@ -13,68 +15,76 @@
 
 {#if followedArtists.length > 0}
 	<div class="mx-auto w-full max-w-6xl">
-		<h2 class="mb-6 text-center text-3xl font-bold">Artists You Follow</h2>
-		<div class="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+		<div class="mb-6 flex items-end justify-between gap-4">
+			<h2 class="text-2xl font-bold sm:text-3xl">Artists You Follow</h2>
+		</div>
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 			{#each followedArtists as artist}
-				<div
-					class="rounded-lg bg-gray-800 p-4 text-center transition duration-300 hover:bg-gray-700"
+				<article
+					class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+					style="transform-style: preserve-3d;"
+					on:mouseenter={(e) => {
+						const card = e.currentTarget;
+						card.style.transition = 'transform 0.1s ease-out';
+					}}
+					on:mouseleave={(e) => {
+						const card = e.currentTarget;
+						card.style.transition = 'transform 0.3s ease-out';
+						card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+					}}
+					on:mousemove={(e) => {
+						const card = e.currentTarget;
+						const rect = card.getBoundingClientRect();
+						const centerX = rect.left + rect.width / 2;
+						const centerY = rect.top + rect.height / 2;
+
+						const mouseX = e.clientX - centerX;
+						const mouseY = e.clientY - centerY;
+
+						const rotateX = (mouseY / rect.height) * -20;
+						const rotateY = (mouseX / rect.width) * 20;
+
+						card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+					}}
 				>
-					<div class="mb-4 aspect-square">
+					<div class="aspect-square p-4">
 						{#if artist.images && artist.images.length > 0}
 							<img
 								src={artist.images[0].url}
 								alt={artist.name}
-								class="h-full w-full rounded-full object-cover"
+								class="h-full w-full rounded-xl object-cover"
 							/>
 						{:else}
-							<div class="flex h-full w-full items-center justify-center rounded-full bg-gray-600">
-								<svg class="h-16 w-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-									<path
-										fill-rule="evenodd"
-										d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</div>
-						{/if}
-					</div>
-
-					<div class="space-y-2">
-						<h3 class="truncate font-semibold text-white" title={artist.name}>
-							{artist.name}
-						</h3>
-
-						{#if artist.genres && artist.genres.length > 0}
-							<p class="truncate text-sm text-gray-400" title={artist.genres.join(', ')}>
-								{artist.genres.slice(0, 2).join(', ')}
-								{#if artist.genres.length > 2}
-									...
-								{/if}
-							</p>
-						{/if}
-
-						<div class="text-sm text-gray-500">
-							{formatNumber(artist.followers?.total || 0)} followers
-						</div>
-
-						{#if artist.popularity}
-							<div class="text-sm text-gray-500">
-								Popularity: {artist.popularity}%
-							</div>
-						{/if}
-
-						{#if artist.external_urls?.spotify}
-							<a
-								href={artist.external_urls.spotify}
-								target="_blank"
-								rel="noopener noreferrer"
-								class="mt-3 block w-full rounded-lg bg-green-600 px-4 py-2 text-center text-white transition duration-300 hover:bg-green-700"
+							<div
+								class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
 							>
-								View Artist
-							</a>
+								<User class="h-8 w-8 text-white/40" />
+							</div>
 						{/if}
 					</div>
-				</div>
+					<div class="p-3">
+						<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
+						{#if artist.genres && artist.genres.length > 0}
+							<p class="mt-1 truncate text-xs text-white/60 capitalize">
+								{artist.genres[0]}
+							</p>
+						{:else}
+							<p class="mt-1 truncate text-xs text-white/60">Artist</p>
+						{/if}
+						<div class="mt-1 flex items-center justify-between text-xs text-white/50">
+							<div class="flex items-center gap-1">
+								<Users class="h-3 w-3" />
+								<span>{formatNumber(artist.followers?.total || 0)}</span>
+							</div>
+							{#if artist.popularity}
+								<div class="flex items-center gap-1">
+									<TrendingUp class="h-3 w-3" />
+									<span>{artist.popularity}%</span>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</article>
 			{/each}
 		</div>
 	</div>

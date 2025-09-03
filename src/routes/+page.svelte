@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { callSpotifyApi } from '$lib/spotify';
+	import { Music, User, Users, TrendingUp, LogOut } from '@lucide/svelte';
+
 	import NowPlaying from '$lib/components/NowPlaying.svelte';
 	import UserProfile from '$lib/components/UserProfile.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
@@ -11,6 +13,7 @@
 	import SavedAlbums from '$lib/components/SavedAlbums.svelte';
 	import SavedTracks from '$lib/components/SavedTracks.svelte';
 	import DevicesInfo from '$lib/components/DevicesInfo.svelte';
+	import TrackCard from '$lib/components/TrackCard.svelte';
 
 	const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 	const redirectUri = 'http://127.0.0.1:5173';
@@ -34,6 +37,18 @@
 	let savedTracksOffset = 0;
 	let hasMoreSavedTracks = true;
 
+	// Polling control
+	let pollingInterval: number | null = null;
+
+	function formatNumber(num: number): string {
+		if (num >= 1000000) {
+			return (num / 1000000).toFixed(1) + 'M';
+		} else if (num >= 1000) {
+			return (num / 1000).toFixed(1) + 'K';
+		}
+		return num.toString();
+	}
+
 	onMount(() => {
 		const urlParams = new URLSearchParams(window.location.search);
 		const code = urlParams.get('code');
@@ -44,6 +59,8 @@
 			isLoggedIn = true;
 			// If logged in, start fetching data immediately
 			fetchAllData();
+			// Start polling for now playing updates
+			startNowPlayingPolling();
 		}
 	});
 
@@ -74,6 +91,15 @@
 		try {
 			const data = await callSpotifyApi('/me/top/artists?time_range=long_term&limit=20');
 			topArtists = data.items;
+			// Debug: Log first few artists to see genre data
+			console.log(
+				'Top artists with genres:',
+				topArtists.slice(0, 3).map((artist: any) => ({
+					name: artist.name,
+					genres: artist.genres,
+					hasGenres: artist.genres && artist.genres.length > 0
+				}))
+			);
 		} catch (error) {
 			console.error('Failed to fetch top artists:', error);
 		}
@@ -94,6 +120,11 @@
 			currentlyPlaying = data;
 		} catch (error) {
 			console.error('Failed to fetch now playing:', error);
+			// If it's an auth error, stop polling to prevent spam
+			if (error instanceof Error && error.message.includes('Authentication failed')) {
+				stopNowPlayingPolling();
+				isLoggedIn = false;
+			}
 		}
 	}
 
@@ -168,11 +199,60 @@
 		activeSection = section;
 	}
 
-	// A robust polling function using recursive setTimeout
-	async function pollNowPlaying() {
-		await fetchNowPlaying();
-		setTimeout(pollNowPlaying, 5000); // Poll every 5 seconds
+	function logout() {
+		// Stop polling
+		stopNowPlayingPolling();
+
+		// Clear all stored data
+		localStorage.removeItem('access_token');
+		localStorage.removeItem('refresh_token');
+		localStorage.removeItem('code_verifier');
+
+		// Reset state
+		isLoggedIn = false;
+		userProfile = null;
+		topArtists = [];
+		topTracks = [];
+		currentlyPlaying = null;
+		recentlyPlayed = [];
+		playlists = [];
+		followedArtists = [];
+		savedAlbums = [];
+		savedTracks = [];
+		devices = [];
+
+		// Reset pagination
+		savedTracksOffset = 0;
+		hasMoreSavedTracks = true;
+
+		// Reset active section
+		activeSection = 'overview';
 	}
+
+	// A robust polling function using setInterval for better control
+	function startNowPlayingPolling() {
+		// Clear any existing interval
+		if (pollingInterval) {
+			clearInterval(pollingInterval);
+		}
+
+		// Start new interval
+		pollingInterval = setInterval(async () => {
+			await fetchNowPlaying();
+		}, 1000); // Poll every 1 second for real-time updates
+	}
+
+	function stopNowPlayingPolling() {
+		if (pollingInterval) {
+			clearInterval(pollingInterval);
+			pollingInterval = null;
+		}
+	}
+
+	// Cleanup on component destroy
+	onDestroy(() => {
+		stopNowPlayingPolling();
+	});
 
 	// --- All the authentication functions from before remain the same ---
 
@@ -221,7 +301,7 @@
 			isLoggedIn = true;
 			window.history.pushState({}, '', redirectUri);
 			fetchAllData(); // Fetch data right after logging in
-			pollNowPlaying(); // Start polling
+			startNowPlayingPolling(); // Start polling
 		} catch (error) {
 			console.error('Error fetching token:', error);
 		}
@@ -244,20 +324,82 @@
 	}
 </script>
 
-<main class="flex min-h-screen flex-col items-center space-y-12 bg-gray-900 p-8 text-white">
-	{#if !isLoggedIn}
-		<div class="my-auto text-center">
-			<h1 class="mb-4 text-5xl font-bold">Spotify Stats Fetcher</h1>
-			<p class="mb-8 text-lg text-gray-400">Log in to see your personal listening stats.</p>
-			<button
-				on:click={redirectToSpotifyLogin}
-				class="rounded-full bg-green-500 px-8 py-3 text-lg font-bold text-white transition duration-300 hover:bg-green-600"
+<!-- Pulsing Background -->
+<div aria-hidden="true" class="fixed inset-0 -z-10">
+	<div
+		class="absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_0%,rgba(94,234,212,0.06),rgba(11,15,20,0))]"
+	></div>
+	<div
+		class="animate-pulsegrid absolute inset-0 [background-image:linear-gradient(transparent,transparent),linear-gradient(#111827_1px,transparent_1px),linear-gradient(90deg,#111827_1px,transparent_1px)] bg-[length:100%_100%,32px_32px,32px_32px] opacity-30"
+	></div>
+</div>
+
+<!-- Top Bar -->
+<header class="bg-canvas/80 sticky top-0 z-30 border-b border-white/5 backdrop-blur">
+	<div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+		<div class="flex items-center gap-2">
+			<div
+				class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500"
 			>
-				Log in with Spotify
-			</button>
+				<Music class="h-4 w-4 text-white" />
+			</div>
+			<span class="font-semibold text-white">Spotify Stats</span>
 		</div>
+		<div class="ml-auto flex items-center gap-4 text-sm text-white/60">
+			{#if isLoggedIn}
+				<span class="inline-flex items-center gap-2">
+					<span class="inline-flex size-1.5 animate-ping rounded-full bg-emerald-400"></span>
+					Connected to Spotify
+				</span>
+				<button
+					on:click={logout}
+					class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-white/70 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+					title="Logout from Spotify"
+				>
+					<LogOut class="h-4 w-4" />
+					Logout
+				</button>
+			{:else}
+				<span>Connect to see your stats</span>
+			{/if}
+		</div>
+	</div>
+</header>
+
+<main class="bg-canvas min-h-screen text-white selection:bg-teal-300/20 selection:text-teal-200">
+	{#if !isLoggedIn}
+		<!-- Hero Section -->
+		<section class="mx-auto max-w-6xl px-4 py-20">
+			<div class="text-center">
+				<div
+					class="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70"
+				>
+					<span class="inline-flex size-1.5 animate-ping rounded-full bg-emerald-400"></span>
+					Spotify Web API Integration
+				</div>
+				<h1 class="mb-6 text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-6xl">
+					Your <span
+						class="bg-gradient-to-r from-emerald-300 to-teal-400 bg-clip-text text-transparent"
+						>Spotify</span
+					>
+					Stats
+					<br />Dashboard
+				</h1>
+				<p class="mx-auto mb-8 max-w-2xl text-lg text-white/70">
+					Discover your music listening patterns with a comprehensive dashboard that shows your top
+					tracks, artists, recently played music, and much more.
+				</p>
+				<button
+					on:click={redirectToSpotifyLogin}
+					class="shadow-glow inline-flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-6 py-3 font-medium transition-all duration-300 hover:bg-emerald-400/20"
+				>
+					<Music class="h-5 w-5" />
+					Connect with Spotify
+				</button>
+			</div>
+		</section>
 	{:else}
-		<div class="mx-auto w-full max-w-7xl space-y-8">
+		<div class="mx-auto max-w-6xl space-y-8 px-4 py-8">
 			<!-- User Profile Header -->
 			<UserProfile {userProfile} />
 
@@ -272,75 +414,186 @@
 				<div class="space-y-12">
 					<!-- Top Artists Overview -->
 					{#if topArtists.length > 0}
-						<div class="mx-auto w-full max-w-6xl">
-							<h2 class="mb-6 text-center text-3xl font-bold">Your Top Artists</h2>
-							<div class="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+								<button
+									on:click={() => handleSectionChange('top-artists')}
+									class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+								>
+									View All
+								</button>
+							</div>
+							<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 								{#each topArtists.slice(0, 10) as artist}
-									<div class="rounded-lg bg-gray-800 p-4 text-center transition hover:bg-gray-700">
-										{#if artist.images && artist.images.length > 0}
-											<img
-												src={artist.images[0].url}
-												alt={artist.name}
-												class="mx-auto mb-4 aspect-square h-auto w-full rounded-full object-cover"
-											/>
-										{/if}
-										<p class="truncate font-semibold">{artist.name}</p>
-									</div>
+									<article
+										class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+										style="transform-style: preserve-3d;"
+										on:mouseenter={(e) => {
+											const card = e.currentTarget;
+											card.style.transition = 'transform 0.1s ease-out';
+										}}
+										on:mouseleave={(e) => {
+											const card = e.currentTarget;
+											card.style.transition = 'transform 0.3s ease-out';
+											card.style.transform =
+												'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+										}}
+										on:mousemove={(e) => {
+											const card = e.currentTarget;
+											const rect = card.getBoundingClientRect();
+											const centerX = rect.left + rect.width / 2;
+											const centerY = rect.top + rect.height / 2;
+
+											const mouseX = e.clientX - centerX;
+											const mouseY = e.clientY - centerY;
+
+											const rotateX = (mouseY / rect.height) * -20;
+											const rotateY = (mouseX / rect.width) * 20;
+
+											card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+										}}
+									>
+										<div class="aspect-square p-4">
+											{#if artist.images && artist.images.length > 0}
+												<img
+													src={artist.images[0].url}
+													alt={artist.name}
+													class="h-full w-full rounded-xl object-cover"
+												/>
+											{:else}
+												<div
+													class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
+												>
+													<User class="h-8 w-8 text-white/40" />
+												</div>
+											{/if}
+										</div>
+										<div class="p-3">
+											<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
+											{#if artist.genres && artist.genres.length > 0}
+												<p class="mt-1 truncate text-xs text-white/60 capitalize">
+													{artist.genres[0]}
+												</p>
+											{:else}
+												<p class="mt-1 truncate text-xs text-white/60">Artist</p>
+											{/if}
+											<div class="mt-1 flex items-center justify-between text-xs text-white/50">
+												<div class="flex items-center gap-1">
+													<Users class="h-3 w-3" />
+													<span>{formatNumber(artist.followers?.total || 0)}</span>
+												</div>
+												{#if artist.popularity}
+													<div class="flex items-center gap-1">
+														<TrendingUp class="h-3 w-3" />
+														<span>{artist.popularity}%</span>
+													</div>
+												{/if}
+											</div>
+										</div>
+									</article>
 								{/each}
 							</div>
-						</div>
+						</section>
 					{/if}
 
 					<!-- Top Tracks Overview -->
 					{#if topTracks.length > 0}
-						<div class="mx-auto w-full max-w-6xl">
-							<h2 class="mb-6 text-center text-3xl font-bold">Your Top Tracks</h2>
-							<div class="grid gap-4">
+						<section>
+							<div class="mb-6 flex items-end justify-between gap-4">
+								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+								<button
+									on:click={() => handleSectionChange('top-tracks')}
+									class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+								>
+									View All
+								</button>
+							</div>
+							<div class="space-y-3">
 								{#each topTracks.slice(0, 5) as track, index}
-									<div class="rounded-lg bg-gray-800 p-4 transition duration-300 hover:bg-gray-700">
-										<div class="flex items-center space-x-4">
-											<div class="w-8 flex-shrink-0 text-center">
-												<span class="text-2xl font-bold text-green-400">#{index + 1}</span>
-											</div>
-
-											{#if track.album.images && track.album.images.length > 0}
-												<img
-													src={track.album.images[0].url}
-													alt={track.album.name}
-													class="h-16 w-16 flex-shrink-0 rounded-md object-cover"
-												/>
-											{/if}
-
-											<div class="min-w-0 flex-1">
-												<h3 class="truncate text-lg font-semibold text-white">{track.name}</h3>
-												<p class="truncate text-gray-400">
-													{track.artists.map((artist: any) => artist.name).join(', ')}
-												</p>
-											</div>
-										</div>
-									</div>
+									<TrackCard
+										{track}
+										{index}
+										showRanking={true}
+										showAlbum={false}
+										showDuration={true}
+										showPopularity={false}
+									/>
 								{/each}
 							</div>
-						</div>
+						</section>
 					{/if}
 				</div>
 			{:else if activeSection === 'top-tracks'}
 				<TopTracks {topTracks} />
 			{:else if activeSection === 'top-artists'}
-				<div class="mx-auto w-full max-w-6xl">
-					<h2 class="mb-6 text-center text-3xl font-bold">Your Top Artists</h2>
-					<div class="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
+				<div class="space-y-6">
+					<h2 class="text-2xl font-bold sm:text-3xl">Your Top Artists</h2>
+					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 						{#each topArtists as artist}
-							<div class="rounded-lg bg-gray-800 p-4 text-center transition hover:bg-gray-700">
-								{#if artist.images && artist.images.length > 0}
-									<img
-										src={artist.images[0].url}
-										alt={artist.name}
-										class="mx-auto mb-4 aspect-square h-auto w-full rounded-full object-cover"
-									/>
-								{/if}
-								<p class="truncate font-semibold">{artist.name}</p>
-							</div>
+							<article
+								class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+								style="transform-style: preserve-3d;"
+								on:mouseenter={(e) => {
+									const card = e.currentTarget;
+									card.style.transition = 'transform 0.1s ease-out';
+								}}
+								on:mouseleave={(e) => {
+									const card = e.currentTarget;
+									card.style.transition = 'transform 0.3s ease-out';
+									card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+								}}
+								on:mousemove={(e) => {
+									const card = e.currentTarget;
+									const rect = card.getBoundingClientRect();
+									const centerX = rect.left + rect.width / 2;
+									const centerY = rect.top + rect.height / 2;
+
+									const mouseX = e.clientX - centerX;
+									const mouseY = e.clientY - centerY;
+
+									const rotateX = (mouseY / rect.height) * -20;
+									const rotateY = (mouseX / rect.width) * 20;
+
+									card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+								}}
+							>
+								<div class="aspect-square p-4">
+									{#if artist.images && artist.images.length > 0}
+										<img
+											src={artist.images[0].url}
+											alt={artist.name}
+											class="h-full w-full rounded-xl object-cover"
+										/>
+									{:else}
+										<div
+											class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
+										>
+											<i data-lucide="user" class="h-8 w-8 text-white/40"></i>
+										</div>
+									{/if}
+								</div>
+								<div class="p-3">
+									<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
+									{#if artist.genres && artist.genres.length > 0}
+										<p class="mt-1 truncate text-xs text-white/60 capitalize">{artist.genres[0]}</p>
+									{:else}
+										<p class="mt-1 truncate text-xs text-white/60">Artist</p>
+									{/if}
+									<div class="mt-1 flex items-center justify-between text-xs text-white/50">
+										<div class="flex items-center gap-1">
+											<Users class="h-3 w-3" />
+											<span>{formatNumber(artist.followers?.total || 0)}</span>
+										</div>
+										{#if artist.popularity}
+											<div class="flex items-center gap-1">
+												<TrendingUp class="h-3 w-3" />
+												<span>{artist.popularity}%</span>
+											</div>
+										{/if}
+									</div>
+								</div>
+							</article>
 						{/each}
 					</div>
 				</div>
@@ -353,7 +606,7 @@
 			{:else if activeSection === 'saved-albums'}
 				<SavedAlbums {savedAlbums} />
 			{:else if activeSection === 'saved-tracks'}
-				<SavedTracks {savedTracks} {hasMoreSavedTracks} onLoadMore={loadMoreSavedTracks} />
+				<SavedTracks {savedTracks} hasMore={hasMoreSavedTracks} onLoadMore={loadMoreSavedTracks} />
 			{:else if activeSection === 'devices'}
 				<DevicesInfo {devices} />
 			{/if}

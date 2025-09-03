@@ -1,1 +1,80 @@
 @import 'tailwindcss';
+
+/* Custom CSS Variables and Styles */
+:root {
+	--canvas: #0b0f14;
+	--canvas-soft: #111827;
+}
+
+.bg-canvas {
+	background-color: var(--canvas);
+}
+
+.bg-canvas\/60 {
+	background-color: rgba(11, 15, 20, 0.6);
+}
+
+.bg-canvas\.soft {
+	background-color: var(--canvas-soft);
+}
+
+.shadow-glow {
+	box-shadow: 0 0 20px rgba(94, 234, 212, 0.1);
+}
+
+.focus-visible\:ring-canvas\.glow:focus-visible {
+	ring-color: rgba(94, 234, 212, 0.3);
+}
+
+@keyframes pulsegrid {
+	0%,
+	100% {
+		opacity: 0.3;
+	}
+	50% {
+		opacity: 0.15;
+	}
+}
+
+.animate-pulsegrid {
+	animation: pulsegrid 4s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%,
+	100% {
+		transform: scaleY(1);
+	}
+	50% {
+		transform: scaleY(1.5);
+	}
+}
+
+.animate-float {
+	animation: float 2s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+/* Selection styling */
+::selection {
+	background-color: rgba(94, 234, 212, 0.2);
+	color: rgb(153, 246, 228);
+}
+
+/* Font family */
+.font-inter {
+	font-family:
+		'Inter',
+		system-ui,
+		-apple-system,
+		sans-serif;
+}
