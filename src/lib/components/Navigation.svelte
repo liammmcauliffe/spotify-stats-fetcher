@@ -63,7 +63,6 @@
 				on:click={toggleMobileMenu}
 				class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/70 transition-transform hover:bg-white/10 hover:text-white active:scale-95"
 			>
-				<img src="/favicon.png" alt="Menu" class="h-4 w-4 rounded-sm" />
 				{sections.find((s) => s.id === activeSection)?.name || 'Menu'}
 				<svg
 					class="h-4 w-4 transition-transform duration-200 {showMobileMenu ? 'rotate-180' : ''}"
