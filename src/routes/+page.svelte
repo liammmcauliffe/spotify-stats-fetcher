@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { callSpotifyApi } from '$lib/spotify';
-	import { Music, User, Users, TrendingUp, LogOut } from '@lucide/svelte';
+	import { Music, User, Users, TrendingUp, LogOut, Search } from '@lucide/svelte';
 
 	import NowPlaying from '$lib/components/NowPlaying.svelte';
 	import UserProfile from '$lib/components/UserProfile.svelte';
@@ -16,6 +16,7 @@
 	import TrackCard from '$lib/components/TrackCard.svelte';
 	import LoadingStates from '$lib/components/LoadingStates.svelte';
 	import ErrorState from '$lib/components/ErrorState.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
 
 	const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 	const redirectUri = 'http://127.0.0.1:5173';
@@ -71,6 +72,18 @@
 	// Polling control
 	let pollingInterval: number | null = null;
 
+	// Search state
+	let searchQuery = '';
+	let filteredData = {
+		topArtists: [] as any[],
+		topTracks: [] as any[],
+		recentlyPlayed: [] as any[],
+		playlists: [] as any[],
+		followedArtists: [] as any[],
+		savedAlbums: [] as any[],
+		savedTracks: [] as any[]
+	};
+
 	function formatNumber(num: number): string {
 		if (num >= 1000000) {
 			return (num / 1000000).toFixed(1) + 'M';
@@ -119,6 +132,8 @@
 		]);
 
 		isLoading = false;
+		// Initialize filtered data with all data
+		applySearch();
 	}
 
 	async function fetchUserProfile() {
@@ -335,6 +350,117 @@
 
 	function retryDevices() {
 		fetchDevices();
+	}
+
+	// Search functions
+	function handleSearch(event: CustomEvent) {
+		searchQuery = event.detail.query;
+		applySearch();
+	}
+
+	function getCurrentSectionResults(): any[] {
+		switch (activeSection) {
+			case 'overview':
+				return [...filteredData.topArtists, ...filteredData.topTracks];
+			case 'top-tracks':
+				return filteredData.topTracks;
+			case 'top-artists':
+				return filteredData.topArtists;
+			case 'recently-played':
+				return filteredData.recentlyPlayed;
+			case 'playlists':
+				return filteredData.playlists;
+			case 'followed-artists':
+				return filteredData.followedArtists;
+			case 'saved-albums':
+				return filteredData.savedAlbums;
+			case 'saved-tracks':
+				return filteredData.savedTracks;
+			default:
+				return [];
+		}
+	}
+
+	function applySearch() {
+		if (!searchQuery) {
+			// No search, show all data
+			filteredData = {
+				topArtists,
+				topTracks,
+				recentlyPlayed,
+				playlists,
+				followedArtists,
+				savedAlbums,
+				savedTracks
+			};
+			return;
+		}
+
+		const query = searchQuery.toLowerCase();
+
+		// Filter top artists
+		filteredData.topArtists = topArtists.filter((artist: any) => {
+			return (
+				artist.name.toLowerCase().includes(query) ||
+				(artist.genres &&
+					artist.genres.some((genre: string) => genre.toLowerCase().includes(query)))
+			);
+		});
+
+		// Filter top tracks
+		filteredData.topTracks = topTracks.filter((track: any) => {
+			return (
+				track.name.toLowerCase().includes(query) ||
+				track.artists.some((artist: any) => artist.name.toLowerCase().includes(query)) ||
+				track.album.name.toLowerCase().includes(query)
+			);
+		});
+
+		// Filter recently played
+		filteredData.recentlyPlayed = recentlyPlayed.filter((item: any) => {
+			const track = item.track;
+			return (
+				track.name.toLowerCase().includes(query) ||
+				track.artists.some((artist: any) => artist.name.toLowerCase().includes(query)) ||
+				track.album.name.toLowerCase().includes(query)
+			);
+		});
+
+		// Filter playlists
+		filteredData.playlists = playlists.filter((playlist: any) => {
+			return (
+				playlist.name.toLowerCase().includes(query) ||
+				(playlist.description && playlist.description.toLowerCase().includes(query))
+			);
+		});
+
+		// Filter followed artists
+		filteredData.followedArtists = followedArtists.filter((artist: any) => {
+			return (
+				artist.name.toLowerCase().includes(query) ||
+				(artist.genres &&
+					artist.genres.some((genre: string) => genre.toLowerCase().includes(query)))
+			);
+		});
+
+		// Filter saved albums
+		filteredData.savedAlbums = savedAlbums.filter((albumData: any) => {
+			const album = albumData.album;
+			return (
+				album.name.toLowerCase().includes(query) ||
+				album.artists.some((artist: any) => artist.name.toLowerCase().includes(query))
+			);
+		});
+
+		// Filter saved tracks
+		filteredData.savedTracks = savedTracks.filter((trackData: any) => {
+			const track = trackData.track;
+			return (
+				track.name.toLowerCase().includes(query) ||
+				track.artists.some((artist: any) => artist.name.toLowerCase().includes(query)) ||
+				track.album.name.toLowerCase().includes(query)
+			);
+		});
 	}
 
 	function logout() {
@@ -564,44 +690,228 @@
 				<NowPlaying {currentlyPlaying} />
 			{/if}
 
+			<!-- Search Bar -->
+			<SearchBar
+				placeholder="Search tracks, artists, albums, playlists..."
+				value={searchQuery}
+				on:search={handleSearch}
+			/>
+
 			<!-- Navigation -->
 			<Navigation {activeSection} onSectionChange={handleSectionChange} />
 
-			<!-- Content Sections -->
-			{#if activeSection === 'overview'}
-				<div class="space-y-12">
-					<!-- Top Artists Overview -->
+			<!-- No Results Message -->
+			{#if searchQuery && getCurrentSectionResults().length === 0}
+				<div class="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+					<div
+						class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/10"
+					>
+						<Search class="h-6 w-6 text-white/40" />
+					</div>
+					<h3 class="mb-2 text-lg font-semibold text-white">No results found</h3>
+					<p class="text-white/60">
+						Try adjusting your search terms to find what you're looking for.
+					</p>
+				</div>
+			{:else}
+				<!-- Content Sections -->
+				{#if activeSection === 'overview'}
+					<div class="space-y-12">
+						<!-- Top Artists Overview -->
+						{#if loadingStates.topArtists}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+								</div>
+								<LoadingStates type="artist" count={10} />
+							</section>
+						{:else if errorStates.topArtists}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+								</div>
+								<ErrorState
+									showError={true}
+									errorMessage="Failed to load top artists"
+									onRetry={retryTopArtists}
+								/>
+							</section>
+						{:else if filteredData.topArtists.length > 0}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">
+										Top Artists
+										{#if searchQuery}
+											<span class="text-sm font-normal text-white/60">
+												({filteredData.topArtists.length} of {topArtists.length})
+											</span>
+										{/if}
+									</h2>
+									<button
+										on:click={() => handleSectionChange('top-artists')}
+										class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+									>
+										View All
+									</button>
+								</div>
+								<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+									{#each filteredData.topArtists.slice(0, 10) as artist}
+										<article
+											class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+											style="transform-style: preserve-3d;"
+											on:mouseenter={(e) => {
+												const card = e.currentTarget;
+												card.style.transition = 'transform 0.1s ease-out';
+											}}
+											on:mouseleave={(e) => {
+												const card = e.currentTarget;
+												card.style.transition = 'transform 0.3s ease-out';
+												card.style.transform =
+													'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+											}}
+											on:mousemove={(e) => {
+												const card = e.currentTarget;
+												const rect = card.getBoundingClientRect();
+												const centerX = rect.left + rect.width / 2;
+												const centerY = rect.top + rect.height / 2;
+
+												const mouseX = e.clientX - centerX;
+												const mouseY = e.clientY - centerY;
+
+												const rotateX = (mouseY / rect.height) * -20;
+												const rotateY = (mouseX / rect.width) * 20;
+
+												card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+											}}
+										>
+											<div class="aspect-square p-4">
+												{#if artist.images && artist.images.length > 0}
+													<img
+														src={artist.images[0].url}
+														alt={artist.name}
+														class="h-full w-full rounded-xl object-cover"
+													/>
+												{:else}
+													<div
+														class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
+													>
+														<User class="h-8 w-8 text-white/40" />
+													</div>
+												{/if}
+											</div>
+											<div class="p-3">
+												<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
+												{#if artist.genres && artist.genres.length > 0}
+													<p class="mt-1 truncate text-xs text-white/60 capitalize">
+														{artist.genres[0]}
+													</p>
+												{:else}
+													<p class="mt-1 truncate text-xs text-white/60">Artist</p>
+												{/if}
+												<div class="mt-1 flex items-center justify-between text-xs text-white/50">
+													<div class="flex items-center gap-1">
+														<Users class="h-3 w-3" />
+														<span>{formatNumber(artist.followers?.total || 0)}</span>
+													</div>
+													{#if artist.popularity}
+														<div class="flex items-center gap-1">
+															<TrendingUp class="h-3 w-3" />
+															<span>{artist.popularity}%</span>
+														</div>
+													{/if}
+												</div>
+											</div>
+										</article>
+									{/each}
+								</div>
+							</section>
+						{/if}
+
+						<!-- Top Tracks Overview -->
+						{#if loadingStates.topTracks}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+								</div>
+								<LoadingStates type="track" count={5} />
+							</section>
+						{:else if errorStates.topTracks}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+								</div>
+								<ErrorState
+									showError={true}
+									errorMessage="Failed to load top tracks"
+									onRetry={retryTopTracks}
+								/>
+							</section>
+						{:else if filteredData.topTracks.length > 0}
+							<section>
+								<div class="mb-6 flex items-end justify-between gap-4">
+									<h2 class="text-2xl font-bold sm:text-3xl">
+										Top Tracks
+										{#if searchQuery}
+											<span class="text-sm font-normal text-white/60">
+												({filteredData.topTracks.length} of {topTracks.length})
+											</span>
+										{/if}
+									</h2>
+									<button
+										on:click={() => handleSectionChange('top-tracks')}
+										class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+									>
+										View All
+									</button>
+								</div>
+								<div class="space-y-3">
+									{#each filteredData.topTracks.slice(0, 5) as track, index}
+										<TrackCard
+											{track}
+											{index}
+											showRanking={true}
+											showAlbum={false}
+											showDuration={true}
+											showPopularity={false}
+										/>
+									{/each}
+								</div>
+							</section>
+						{/if}
+					</div>
+				{:else if activeSection === 'top-tracks'}
+					{#if loadingStates.topTracks}
+						<LoadingStates type="track" count={20} />
+					{:else if errorStates.topTracks}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load top tracks"
+							onRetry={retryTopTracks}
+						/>
+					{:else}
+						<TopTracks topTracks={filteredData.topTracks} />
+					{/if}
+				{:else if activeSection === 'top-artists'}
 					{#if loadingStates.topArtists}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
-							</div>
-							<LoadingStates type="artist" count={10} />
-						</section>
+						<LoadingStates type="artist" count={20} />
 					{:else if errorStates.topArtists}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
-							</div>
-							<ErrorState
-								showError={true}
-								errorMessage="Failed to load top artists"
-								onRetry={retryTopArtists}
-							/>
-						</section>
-					{:else if topArtists.length > 0}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
-								<button
-									on:click={() => handleSectionChange('top-artists')}
-									class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-								>
-									View All
-								</button>
-							</div>
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load top artists"
+							onRetry={retryTopArtists}
+						/>
+					{:else}
+						<div class="space-y-6">
+							<h2 class="text-2xl font-bold sm:text-3xl">
+								Your Top Artists
+								{#if searchQuery}
+									<span class="text-sm font-normal text-white/60">
+										({filteredData.topArtists.length} of {topArtists.length})
+									</span>
+								{/if}
+							</h2>
 							<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-								{#each topArtists.slice(0, 10) as artist}
+								{#each filteredData.topArtists as artist}
 									<article
 										class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
 										style="transform-style: preserve-3d;"
@@ -641,7 +951,7 @@
 												<div
 													class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
 												>
-													<User class="h-8 w-8 text-white/40" />
+													<i data-lucide="user" class="h-8 w-8 text-white/40"></i>
 												</div>
 											{/if}
 										</div>
@@ -670,225 +980,84 @@
 									</article>
 								{/each}
 							</div>
-						</section>
-					{/if}
-
-					<!-- Top Tracks Overview -->
-					{#if loadingStates.topTracks}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
-							</div>
-							<LoadingStates type="track" count={5} />
-						</section>
-					{:else if errorStates.topTracks}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
-							</div>
-							<ErrorState
-								showError={true}
-								errorMessage="Failed to load top tracks"
-								onRetry={retryTopTracks}
-							/>
-						</section>
-					{:else if topTracks.length > 0}
-						<section>
-							<div class="mb-6 flex items-end justify-between gap-4">
-								<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
-								<button
-									on:click={() => handleSectionChange('top-tracks')}
-									class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-								>
-									View All
-								</button>
-							</div>
-							<div class="space-y-3">
-								{#each topTracks.slice(0, 5) as track, index}
-									<TrackCard
-										{track}
-										{index}
-										showRanking={true}
-										showAlbum={false}
-										showDuration={true}
-										showPopularity={false}
-									/>
-								{/each}
-							</div>
-						</section>
-					{/if}
-				</div>
-			{:else if activeSection === 'top-tracks'}
-				{#if loadingStates.topTracks}
-					<LoadingStates type="track" count={20} />
-				{:else if errorStates.topTracks}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load top tracks"
-						onRetry={retryTopTracks}
-					/>
-				{:else}
-					<TopTracks {topTracks} />
-				{/if}
-			{:else if activeSection === 'top-artists'}
-				{#if loadingStates.topArtists}
-					<LoadingStates type="artist" count={20} />
-				{:else if errorStates.topArtists}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load top artists"
-						onRetry={retryTopArtists}
-					/>
-				{:else}
-					<div class="space-y-6">
-						<h2 class="text-2xl font-bold sm:text-3xl">Your Top Artists</h2>
-						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-							{#each topArtists as artist}
-								<article
-									class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
-									style="transform-style: preserve-3d;"
-									on:mouseenter={(e) => {
-										const card = e.currentTarget;
-										card.style.transition = 'transform 0.1s ease-out';
-									}}
-									on:mouseleave={(e) => {
-										const card = e.currentTarget;
-										card.style.transition = 'transform 0.3s ease-out';
-										card.style.transform =
-											'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
-									}}
-									on:mousemove={(e) => {
-										const card = e.currentTarget;
-										const rect = card.getBoundingClientRect();
-										const centerX = rect.left + rect.width / 2;
-										const centerY = rect.top + rect.height / 2;
-
-										const mouseX = e.clientX - centerX;
-										const mouseY = e.clientY - centerY;
-
-										const rotateX = (mouseY / rect.height) * -20;
-										const rotateY = (mouseX / rect.width) * 20;
-
-										card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
-									}}
-								>
-									<div class="aspect-square p-4">
-										{#if artist.images && artist.images.length > 0}
-											<img
-												src={artist.images[0].url}
-												alt={artist.name}
-												class="h-full w-full rounded-xl object-cover"
-											/>
-										{:else}
-											<div
-												class="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50"
-											>
-												<i data-lucide="user" class="h-8 w-8 text-white/40"></i>
-											</div>
-										{/if}
-									</div>
-									<div class="p-3">
-										<h3 class="truncate text-sm font-semibold">{artist.name}</h3>
-										{#if artist.genres && artist.genres.length > 0}
-											<p class="mt-1 truncate text-xs text-white/60 capitalize">
-												{artist.genres[0]}
-											</p>
-										{:else}
-											<p class="mt-1 truncate text-xs text-white/60">Artist</p>
-										{/if}
-										<div class="mt-1 flex items-center justify-between text-xs text-white/50">
-											<div class="flex items-center gap-1">
-												<Users class="h-3 w-3" />
-												<span>{formatNumber(artist.followers?.total || 0)}</span>
-											</div>
-											{#if artist.popularity}
-												<div class="flex items-center gap-1">
-													<TrendingUp class="h-3 w-3" />
-													<span>{artist.popularity}%</span>
-												</div>
-											{/if}
-										</div>
-									</div>
-								</article>
-							{/each}
 						</div>
-					</div>
-				{/if}
-			{:else if activeSection === 'recently-played'}
-				{#if loadingStates.recentlyPlayed}
-					<LoadingStates type="track" count={10} />
-				{:else if errorStates.recentlyPlayed}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load recently played tracks"
-						onRetry={retryRecentlyPlayed}
-					/>
-				{:else}
-					<RecentlyPlayed {recentlyPlayed} />
-				{/if}
-			{:else if activeSection === 'playlists'}
-				{#if loadingStates.playlists}
-					<LoadingStates type="playlist" count={10} />
-				{:else if errorStates.playlists}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load playlists"
-						onRetry={retryPlaylists}
-					/>
-				{:else}
-					<SavedPlaylists {playlists} />
-				{/if}
-			{:else if activeSection === 'followed-artists'}
-				{#if loadingStates.followedArtists}
-					<LoadingStates type="artist" count={10} />
-				{:else if errorStates.followedArtists}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load followed artists"
-						onRetry={retryFollowedArtists}
-					/>
-				{:else}
-					<FollowedArtists {followedArtists} />
-				{/if}
-			{:else if activeSection === 'saved-albums'}
-				{#if loadingStates.savedAlbums}
-					<LoadingStates type="album" count={10} />
-				{:else if errorStates.savedAlbums}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load saved albums"
-						onRetry={retrySavedAlbums}
-					/>
-				{:else}
-					<SavedAlbums {savedAlbums} />
-				{/if}
-			{:else if activeSection === 'saved-tracks'}
-				{#if loadingStates.savedTracks}
-					<LoadingStates type="track" count={10} />
-				{:else if errorStates.savedTracks}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load saved tracks"
-						onRetry={retrySavedTracks}
-					/>
-				{:else}
-					<SavedTracks
-						{savedTracks}
-						hasMore={hasMoreSavedTracks}
-						onLoadMore={loadMoreSavedTracks}
-					/>
-				{/if}
-			{:else if activeSection === 'devices'}
-				{#if loadingStates.devices}
-					<LoadingStates type="track" count={5} />
-				{:else if errorStates.devices}
-					<ErrorState
-						showError={true}
-						errorMessage="Failed to load devices"
-						onRetry={retryDevices}
-					/>
-				{:else}
-					<DevicesInfo {devices} />
+					{/if}
+				{:else if activeSection === 'recently-played'}
+					{#if loadingStates.recentlyPlayed}
+						<LoadingStates type="track" count={10} />
+					{:else if errorStates.recentlyPlayed}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load recently played tracks"
+							onRetry={retryRecentlyPlayed}
+						/>
+					{:else}
+						<RecentlyPlayed recentlyPlayed={filteredData.recentlyPlayed} {searchQuery} />
+					{/if}
+				{:else if activeSection === 'playlists'}
+					{#if loadingStates.playlists}
+						<LoadingStates type="playlist" count={10} />
+					{:else if errorStates.playlists}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load playlists"
+							onRetry={retryPlaylists}
+						/>
+					{:else}
+						<SavedPlaylists playlists={filteredData.playlists} />
+					{/if}
+				{:else if activeSection === 'followed-artists'}
+					{#if loadingStates.followedArtists}
+						<LoadingStates type="artist" count={10} />
+					{:else if errorStates.followedArtists}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load followed artists"
+							onRetry={retryFollowedArtists}
+						/>
+					{:else}
+						<FollowedArtists followedArtists={filteredData.followedArtists} />
+					{/if}
+				{:else if activeSection === 'saved-albums'}
+					{#if loadingStates.savedAlbums}
+						<LoadingStates type="album" count={10} />
+					{:else if errorStates.savedAlbums}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load saved albums"
+							onRetry={retrySavedAlbums}
+						/>
+					{:else}
+						<SavedAlbums savedAlbums={filteredData.savedAlbums} />
+					{/if}
+				{:else if activeSection === 'saved-tracks'}
+					{#if loadingStates.savedTracks}
+						<LoadingStates type="track" count={10} />
+					{:else if errorStates.savedTracks}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load saved tracks"
+							onRetry={retrySavedTracks}
+						/>
+					{:else}
+						<SavedTracks
+							savedTracks={filteredData.savedTracks}
+							hasMore={hasMoreSavedTracks}
+							onLoadMore={loadMoreSavedTracks}
+						/>
+					{/if}
+				{:else if activeSection === 'devices'}
+					{#if loadingStates.devices}
+						<LoadingStates type="track" count={5} />
+					{:else if errorStates.devices}
+						<ErrorState
+							showError={true}
+							errorMessage="Failed to load devices"
+							onRetry={retryDevices}
+						/>
+					{:else}
+						<DevicesInfo {devices} />
+					{/if}
 				{/if}
 			{/if}
 		</div>

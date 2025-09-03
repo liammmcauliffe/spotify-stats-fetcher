@@ -7,6 +7,7 @@
 	export let isLoading: boolean = false;
 	export let hasError: boolean = false;
 	export let onRetry: (() => void) | null = null;
+	export let searchQuery: string = '';
 </script>
 
 {#if isLoading}
@@ -39,7 +40,7 @@
 			{/each}
 		</div>
 	</div>
-{:else}
+{:else if !searchQuery}
 	<div class="mx-auto w-full max-w-6xl text-center">
 		<h2 class="mb-6 text-3xl font-bold">Recently Played</h2>
 		<div class="rounded-lg bg-gray-800 p-8">
