@@ -43,13 +43,13 @@
 			{#each sections as section}
 				<button
 					on:click={() => onSectionChange(section.id)}
-					class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 {activeSection ===
+					class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 active:scale-95 {activeSection ===
 					section.id
 						? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-300 shadow-sm shadow-emerald-500/10'
 						: 'text-white/70 hover:text-white'}"
 				>
 					<svelte:component this={section.icon} class="h-3.5 w-3.5" />
-					{section.name}
+					<span class="hidden sm:inline">{section.name}</span>
 				</button>
 			{/each}
 		</div>
@@ -61,12 +61,12 @@
 		<div class="mb-3 flex justify-center">
 			<button
 				on:click={toggleMobileMenu}
-				class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white"
+				class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/70 transition-transform hover:bg-white/10 hover:text-white active:scale-95"
 			>
-				<Music class="h-3.5 w-3.5" />
+				<Music class="h-4 w-4" />
 				{sections.find((s) => s.id === activeSection)?.name || 'Menu'}
 				<svg
-					class="h-3.5 w-3.5 transition-transform duration-200 {showMobileMenu ? 'rotate-180' : ''}"
+					class="h-4 w-4 transition-transform duration-200 {showMobileMenu ? 'rotate-180' : ''}"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -86,12 +86,12 @@
 							onSectionChange(section.id);
 							showMobileMenu = false;
 						}}
-						class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 {activeSection ===
+						class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 active:scale-95 {activeSection ===
 						section.id
 							? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-300'
 							: 'text-white/70 hover:text-white'}"
 					>
-						<svelte:component this={section.icon} class="h-3.5 w-3.5" />
+						<svelte:component this={section.icon} class="h-4 w-4" />
 						{section.name}
 					</button>
 				{/each}

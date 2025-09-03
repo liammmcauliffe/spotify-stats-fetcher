@@ -29,9 +29,9 @@
 		<div
 			class="absolute -inset-6 rounded-3xl bg-gradient-to-tr from-emerald-300/5 via-emerald-400/5 to-teal-300/5 blur-2xl"
 		></div>
-		<div class="relative p-6">
+		<div class="relative p-4 sm:p-6">
 			<div
-				class="flex flex-col items-center space-y-4 md:flex-row md:items-start md:space-y-0 md:space-x-6"
+				class="flex flex-col items-center space-y-4 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-6"
 			>
 				{#if userProfile.images && userProfile.images.length > 0}
 					<img
@@ -47,8 +47,8 @@
 					</div>
 				{/if}
 
-				<div class="flex-1 text-center md:text-left">
-					<div class="mb-3 flex flex-col md:flex-row md:items-center md:space-x-4">
+				<div class="flex-1 text-center sm:text-left">
+					<div class="mb-3 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-4">
 						<h1 class="text-2xl font-bold text-white">{userProfile.display_name}</h1>
 						{#if userProfile.product === 'premium'}
 							<span

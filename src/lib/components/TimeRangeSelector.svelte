@@ -42,12 +42,12 @@
 		{#each timeRanges as range}
 			<button
 				on:click={() => selectTimeRange(range.id)}
-				class="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 {selectedTimeRange ===
+				class="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-all duration-300 hover:border-emerald-300/30 hover:bg-white/10 active:scale-95 {selectedTimeRange ===
 				range.id
 					? 'border-emerald-300/30 bg-emerald-400/10 shadow-md shadow-emerald-500/10'
 					: ''}"
 			>
-				<div class="flex items-start gap-3">
+				<div class="flex items-center gap-3 sm:items-start">
 					<div
 						class="flex-shrink-0 rounded-lg bg-white/5 p-2 transition-colors duration-200 {selectedTimeRange ===
 						range.id
@@ -60,7 +60,7 @@
 						<h4 class="text-sm font-semibold text-white">
 							{range.label}
 						</h4>
-						<p class="mt-0.5 text-xs text-white/50">
+						<p class="mt-0.5 hidden text-xs text-white/50 sm:block">
 							{range.description}
 						</p>
 					</div>

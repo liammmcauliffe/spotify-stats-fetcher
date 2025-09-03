@@ -619,31 +619,33 @@
 
 <!-- Top Bar -->
 <header class="bg-canvas/80 sticky top-0 z-30 border-b border-white/5 backdrop-blur">
-	<div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+	<div class="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
 		<div class="flex items-center gap-2">
 			<div
-				class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500"
+				class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 sm:h-8 sm:w-8"
 			>
-				<Music class="h-4 w-4 text-white" />
+				<Music class="h-3.5 w-3.5 text-white sm:h-4 sm:w-4" />
 			</div>
-			<span class="font-semibold text-white">Spotify Stats</span>
+			<span class="text-sm font-semibold text-white sm:text-base">Spotify Stats</span>
 		</div>
-		<div class="ml-auto flex items-center gap-4 text-sm text-white/60">
+		<div class="ml-auto flex items-center gap-2 text-xs text-white/60 sm:gap-4 sm:text-sm">
 			{#if isLoggedIn}
-				<span class="inline-flex items-center gap-2">
+				<span class="inline-flex items-center gap-1.5 sm:gap-2">
 					<span class="inline-flex size-1.5 animate-ping rounded-full bg-emerald-400"></span>
-					Connected to Spotify
+					<span class="hidden sm:inline">Connected to Spotify</span>
+					<span class="sm:hidden">Connected</span>
 				</span>
 				<button
 					on:click={logout}
-					class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-white/70 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+					class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-white/70 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95 sm:gap-2 sm:px-3"
 					title="Logout from Spotify"
 				>
-					<LogOut class="h-4 w-4" />
-					Logout
+					<LogOut class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+					<span class="hidden sm:inline">Logout</span>
 				</button>
 			{:else}
-				<span>Connect to see your stats</span>
+				<span class="hidden sm:inline">Connect to see your stats</span>
+				<span class="sm:hidden">Connect</span>
 			{/if}
 		</div>
 	</div>
@@ -682,7 +684,7 @@
 			</div>
 		</section>
 	{:else}
-		<div class="mx-auto max-w-6xl space-y-8 px-4 py-8">
+		<div class="mx-auto max-w-6xl space-y-6 px-3 py-6 sm:space-y-8 sm:px-4 sm:py-8">
 			<!-- User Profile Header -->
 			{#if loadingStates.userProfile}
 				<LoadingStates type="profile" count={1} />
@@ -745,14 +747,14 @@
 						{#if loadingStates.topArtists}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">Top Artists</h2>
 								</div>
 								<LoadingStates type="artist" count={10} />
 							</section>
 						{:else if errorStates.topArtists}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">Top Artists</h2>
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">Top Artists</h2>
 								</div>
 								<ErrorState
 									showError={true}
@@ -763,7 +765,7 @@
 						{:else if filteredData.topArtists.length > 0}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">
 										Top Artists
 										{#if searchQuery}
 											<span class="text-sm font-normal text-white/60">
@@ -773,15 +775,15 @@
 									</h2>
 									<button
 										on:click={() => handleSectionChange('top-artists')}
-										class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+										class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm transition-transform hover:bg-white/10 active:scale-95"
 									>
 										View All
 									</button>
 								</div>
-								<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+								<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
 									{#each filteredData.topArtists.slice(0, 10) as artist}
 										<article
-											class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+											class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10 active:scale-95"
 											style="transform-style: preserve-3d;"
 											on:mouseenter={(e) => {
 												const card = e.currentTarget;
@@ -855,14 +857,14 @@
 						{#if loadingStates.topTracks}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">Top Tracks</h2>
 								</div>
 								<LoadingStates type="track" count={5} />
 							</section>
 						{:else if errorStates.topTracks}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">Top Tracks</h2>
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">Top Tracks</h2>
 								</div>
 								<ErrorState
 									showError={true}
@@ -873,7 +875,7 @@
 						{:else if filteredData.topTracks.length > 0}
 							<section>
 								<div class="mb-6 flex items-end justify-between gap-4">
-									<h2 class="text-2xl font-bold sm:text-3xl">
+									<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">
 										Top Tracks
 										{#if searchQuery}
 											<span class="text-sm font-normal text-white/60">
@@ -883,7 +885,7 @@
 									</h2>
 									<button
 										on:click={() => handleSectionChange('top-tracks')}
-										class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+										class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm transition-transform hover:bg-white/10 active:scale-95"
 									>
 										View All
 									</button>
@@ -926,7 +928,7 @@
 						/>
 					{:else}
 						<div class="space-y-6">
-							<h2 class="text-2xl font-bold sm:text-3xl">
+							<h2 class="text-xl font-bold sm:text-2xl lg:text-3xl">
 								Your Top Artists
 								{#if searchQuery}
 									<span class="text-sm font-normal text-white/60">
@@ -934,10 +936,10 @@
 									</span>
 								{/if}
 							</h2>
-							<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+							<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
 								{#each filteredData.topArtists as artist}
 									<article
-										class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10"
+										class="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur transition-all duration-300 hover:border-emerald-300/30 hover:shadow-2xl hover:shadow-emerald-500/10 active:scale-95"
 										style="transform-style: preserve-3d;"
 										on:mouseenter={(e) => {
 											const card = e.currentTarget;
